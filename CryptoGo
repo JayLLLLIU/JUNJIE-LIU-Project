@@ -22,15 +22,25 @@ const portfolioMetrics = {
     'EW_volatility_28': { mean: '~65%', sharpe: '~0.85', vol: '~75%' }
 };
 
-// --- NEW: SVG Icons for UI Elements ---
+// --- SVG Icons for UI Elements ---
 const ChartBarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-teal-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
 const ShieldCheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
 const TrendingUpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>;
+const GeminiIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5"><path d="M9.50003 4.5L13.5 12L9.50003 19.5L5.5 12L9.50003 4.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M18.5 4.5L14.5 12L18.5 19.5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>;
 
 // --- Reusable Card Component ---
-const Card = ({ title, children, className }) => (
+const Card = ({ title, children, className, onExplain, explanation, isExplanationLoading }) => (
     <div className={`bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-slate-700 hover:border-teal-400 transition-all duration-300 ${className}`}>
-        <h3 className="text-xl font-bold mb-4 bg-gradient-to-r from-teal-300 to-sky-400 text-transparent bg-clip-text">{title}</h3>
+        <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold bg-gradient-to-r from-teal-300 to-sky-400 text-transparent bg-clip-text">{title}</h3>
+            {onExplain && (
+                <button onClick={onExplain} className="p-2 rounded-full bg-slate-700/50 hover:bg-slate-600/50 transition-colors" title="Explain this chart">
+                    <GeminiIcon />
+                </button>
+            )}
+        </div>
+        {isExplanationLoading && <div className="text-slate-400 text-sm">✨ Thinking...</div>}
+        {explanation && <div className="text-sm text-slate-300 bg-slate-700/30 p-3 rounded-lg mb-4 animate-fade-in">{explanation}</div>}
         {children}
     </div>
 );
@@ -38,7 +48,6 @@ const Card = ({ title, children, className }) => (
 // --- Interactive Performance Modal ---
 const PerformanceModal = ({ portfolioName, metrics, onClose }) => {
     if (!portfolioName) return null;
-
     return (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fade-in">
             <div className="bg-slate-900 rounded-2xl shadow-xl border border-slate-700 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -65,36 +74,20 @@ const PerformanceModal = ({ portfolioName, metrics, onClose }) => {
     );
 };
 
-
 // --- Login Page Component ---
 const LoginPage = ({ onLogin }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-
-    const handleLogin = (e) => {
-        e.preventDefault();
-        if (email && password) { onLogin(email); } 
-        else { setError('Please enter both email and password.'); }
-    };
-
+    const handleLogin = (e) => { e.preventDefault(); if (email && password) { onLogin(email); } else { setError('Please enter both email and password.'); } };
     return (
         <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white p-4">
             <div className="absolute inset-0 bg-grid-slate-700/10 [mask-image:linear-gradient(to_bottom,white_20%,transparent_75%)]"></div>
             <div className="relative w-full max-w-md p-8 space-y-8 bg-slate-800/70 backdrop-blur-xl rounded-2xl shadow-2xl shadow-teal-500/10 border border-slate-700">
-                <div className="text-center">
-                    <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-purple-500">CryptoGo</h1>
-                    <p className="mt-2 text-slate-400">Login to access your portfolio</p>
-                </div>
+                <div className="text-center"><h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-purple-500">CryptoGo</h1><p className="mt-2 text-slate-400">Login to access your portfolio</p></div>
                 <form className="space-y-6" onSubmit={handleLogin}>
-                    <div>
-                        <label className="text-sm font-bold text-slate-300">Email Address</label>
-                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 mt-2 text-slate-200 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition" placeholder="you@example.com"/>
-                    </div>
-                    <div>
-                        <label className="text-sm font-bold text-slate-300">Password</label>
-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-3 mt-2 text-slate-200 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition" placeholder="••••••••"/>
-                    </div>
+                    <div><label className="text-sm font-bold text-slate-300">Email Address</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 mt-2 text-slate-200 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition" placeholder="you@example.com"/></div>
+                    <div><label className="text-sm font-bold text-slate-300">Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-3 mt-2 text-slate-200 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition" placeholder="••••••••"/></div>
                     {error && <p className="text-red-400 text-sm animate-pulse">{error}</p>}
                     <button type="submit" className="w-full py-3 font-bold text-white bg-gradient-to-r from-teal-500 to-purple-600 rounded-lg hover:from-teal-600 hover:to-purple-700 transition-all duration-300 shadow-lg shadow-teal-500/20">Sign In</button>
                 </form>
@@ -102,7 +95,6 @@ const LoginPage = ({ onLogin }) => {
         </div>
     );
 };
-
 
 // --- Main Dashboard Component ---
 const Dashboard = ({ user, onLogout }) => {
@@ -114,22 +106,121 @@ const Dashboard = ({ user, onLogout }) => {
     const [message, setMessage] = useState('');
     const [viewingPortfolio, setViewingPortfolio] = useState(null);
 
-    const handleInvestment = () => {
-        if (investmentAmount <= 0) { setMessage('Please enter a positive investment amount.'); return; }
-        if (investmentAmount > virtualBalance) { setMessage('Insufficient balance for this investment.'); return; }
-        setVirtualBalance(prev => prev - investmentAmount);
-        setInvestments(prev => ({ ...prev, [selectedPortfolio]: prev[selectedPortfolio] + investmentAmount }));
-        setMessage(`Successfully invested $${investmentAmount.toLocaleString()} in ${selectedPortfolio}.`);
-        setInvestmentAmount(1000);
+    // --- NEW: State for Gemini API features ---
+    const [aiAnalysis, setAiAnalysis] = useState('');
+    const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
+    const [chartExplanations, setChartExplanations] = useState({});
+    const [explanationLoading, setExplanationLoading] = useState(null);
+    const [isBriefingLoading, setIsBriefingLoading] = useState(false);
+    const [briefingAudio, setBriefingAudio] = useState(null);
+
+    // --- Gemini API Call Logic ---
+    const callGeminiAPI = async (prompt, retries = 3, delay = 1000) => {
+        const apiKey = ""; // Will be provided by the environment
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+        const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
+            const result = await response.json();
+            return result.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response.";
+        } catch (error) {
+            if (retries > 0) {
+                await new Promise(res => setTimeout(res, delay));
+                return callGeminiAPI(prompt, retries - 1, delay * 2);
+            }
+            return "There was an error contacting the AI. Please try again later.";
+        }
+    };
+    
+    // --- Gemini TTS API Call Logic ---
+    const callGeminiTTSAPI = async (text, retries = 3, delay = 1000) => {
+        const apiKey = ""; // Will be provided by the environment
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+        const payload = {
+            contents: [{ parts: [{ text }] }],
+            generationConfig: { responseModalities: ["AUDIO"] },
+            model: "gemini-2.5-flash-preview-tts"
+        };
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error(`TTS API Error: ${response.status}`);
+            const result = await response.json();
+            const audioData = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+            if (audioData) {
+                const pcmData = atob(audioData);
+                const pcmArray = new Uint8Array(pcmData.length);
+                for (let i = 0; i < pcmData.length; i++) { pcmArray[i] = pcmData.charCodeAt(i); }
+                const blob = new Blob([pcmArray], { type: 'audio/L16; rate=24000' });
+                const audioUrl = URL.createObjectURL(blob);
+                setBriefingAudio(audioUrl);
+            }
+        } catch (error) {
+            if (retries > 0) {
+                await new Promise(res => setTimeout(res, delay));
+                return callGeminiTTSAPI(text, retries - 1, delay * 2);
+            }
+            console.error("Error generating TTS audio:", error);
+        }
     };
 
-    useEffect(() => {
-        if (message) {
-            const timer = setTimeout(() => setMessage(''), 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [message]);
 
+    const handleGetAnalysis = async () => {
+        setIsAnalysisLoading(true);
+        setAiAnalysis('');
+        const holdings = JSON.stringify(investments);
+        const prompt = `You are a helpful financial analyst named 'Go'. Your client has the following virtual crypto portfolio based on factor strategies: ${holdings}. The total invested amount is $${Object.values(investments).reduce((s, v) => s + v, 0)}. The strategies are: 'EW_momentum' (buys recent winners, shorts losers) and 'EW_volatility' (buys low-volatility assets, shorts high-volatility). Briefly analyze this portfolio's composition. Comment on its diversification between momentum and volatility factors and suggest what the client might consider for their next move. Keep it concise and encouraging.`;
+        const response = await callGeminiAPI(prompt);
+        setAiAnalysis(response);
+        setIsAnalysisLoading(false);
+    };
+
+    const handleExplainChart = async (chartKey, chartTitle) => {
+        setExplanationLoading(chartKey);
+        setChartExplanations(prev => ({ ...prev, [chartKey]: '' }));
+        const prompts = {
+            cumulativeReturns: "Explain the 'Cumulative Returns - Top 5 Factors vs BTC' chart. What is cumulative return, and what is the main takeaway when comparing the strategies to the BTC benchmark?",
+            meanSharpeVol: "This card shows three charts: Mean Annual Returns, Sharpe Ratios, and Annualized Volatility. Briefly explain what each of these three metrics tells an investor about the performance of these crypto strategies.",
+            rollingPerformance: "Explain the 'Rolling Performance Dashboard'. What does a rolling Sharpe ratio show that a simple cumulative return chart doesn't? What is the key insight from the correlation matrix at the bottom?",
+            sentiment: "This card shows a 'Fear & Greed Gauge' and a 'Confusion Matrix' for sentiment analysis. Briefly explain what each of these tells us about the market's mood and the sentiment model's accuracy."
+        };
+        const prompt = `You are a helpful financial analyst. Explain the following chart/concept to a client in 2-3 simple sentences. The chart is titled '${chartTitle}'. ${prompts[chartKey]}`;
+        const response = await callGeminiAPI(prompt);
+        setChartExplanations(prev => ({ ...prev, [chartKey]: response }));
+        setExplanationLoading(null);
+    };
+    
+    const handlePlayBriefing = async () => {
+        setIsBriefingLoading(true);
+        setBriefingAudio(null);
+        const scriptPrompt = "Act as a financial news anchor for 'CryptoGo'. The current market sentiment is 'Extreme Greed' with a score of 89. Write a very short, 2-sentence market briefing for today, August 7th, 2025. Start with 'Good morning from CryptoGo.'";
+        const script = await callGeminiAPI(scriptPrompt);
+        if (script) {
+            await callGeminiTTSAPI(script);
+        }
+        setIsBriefingLoading(false);
+    };
+    
+    useEffect(() => {
+        if (briefingAudio) {
+            const audio = new Audio(briefingAudio);
+            audio.play();
+        }
+    }, [briefingAudio]);
+
+
+    const handleInvestment = () => { if (investmentAmount <= 0) { setMessage('Please enter a positive investment amount.'); return; } if (investmentAmount > virtualBalance) { setMessage('Insufficient balance for this investment.'); return; } setVirtualBalance(prev => prev - investmentAmount); setInvestments(prev => ({ ...prev, [selectedPortfolio]: prev[selectedPortfolio] + investmentAmount })); setMessage(`Successfully invested $${investmentAmount.toLocaleString()} in ${selectedPortfolio}.`); setInvestmentAmount(1000); };
+    useEffect(() => { if (message) { const timer = setTimeout(() => setMessage(''), 3000); return () => clearTimeout(timer); } }, [message]);
     const classificationReport = `              precision    recall  f1-score   support\n\n           0       0.85      0.39      0.54     25752\n           1       0.67      0.94      0.78     33204\n\n    accuracy                           0.70     58956\n   macro avg       0.76      0.67      0.66     58956\nweighted avg       0.75      0.70      0.67     58956`;
 
     return (
@@ -140,9 +231,15 @@ const Dashboard = ({ user, onLogout }) => {
                     <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-purple-500">CryptoGo</h1>
                     <p className="text-slate-400 mt-2">Advanced Portfolio & Market Analysis</p>
                 </div>
-                <div className="text-right">
-                    <p className="text-slate-400">Welcome, {user}</p>
-                    <button onClick={onLogout} className="text-sm text-teal-400 hover:underline">Logout</button>
+                <div className="flex items-center gap-4">
+                     <button onClick={handlePlayBriefing} disabled={isBriefingLoading} className="flex items-center gap-2 px-4 py-2 font-bold text-white bg-gradient-to-r from-sky-500 to-indigo-600 rounded-lg hover:from-sky-600 hover:to-indigo-700 transition-all duration-300 shadow-lg shadow-sky-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <GeminiIcon />
+                        {isBriefingLoading ? 'Generating...' : 'Play Daily Briefing'}
+                    </button>
+                    <div className="text-right">
+                        <p className="text-slate-400">Welcome, {user}</p>
+                        <button onClick={onLogout} className="text-sm text-teal-400 hover:underline">Logout</button>
+                    </div>
                 </div>
             </header>
 
@@ -151,48 +248,29 @@ const Dashboard = ({ user, onLogout }) => {
                     <Card title="Interactive Portfolio Investment">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                             <div className="lg:col-span-1 space-y-4">
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-300 mb-2">Virtual Balance</label>
-                                    <div className="text-4xl font-bold text-lime-300">${virtualBalance.toLocaleString()}</div>
-                                </div>
-                                <div>
-                                    <label htmlFor="portfolio-select" className="block text-sm font-bold text-slate-300 mb-2">Select Portfolio</label>
-                                    <select id="portfolio-select" value={selectedPortfolio} onChange={e => setSelectedPortfolio(e.target.value)} className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition">
-                                        {topPortfolios.map(p => <option key={p} value={p}>{p}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label htmlFor="investment-amount" className="block text-sm font-bold text-slate-300 mb-2">Investment Amount</label>
-                                    <input type="number" id="investment-amount" value={investmentAmount} onChange={e => setInvestmentAmount(Number(e.target.value))} className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition"/>
-                                </div>
+                                <div><label className="block text-sm font-bold text-slate-300 mb-2">Virtual Balance</label><div className="text-4xl font-bold text-lime-300">${virtualBalance.toLocaleString()}</div></div>
+                                <div><label htmlFor="portfolio-select" className="block text-sm font-bold text-slate-300 mb-2">Select Portfolio</label><select id="portfolio-select" value={selectedPortfolio} onChange={e => setSelectedPortfolio(e.target.value)} className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition">{topPortfolios.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+                                <div><label htmlFor="investment-amount" className="block text-sm font-bold text-slate-300 mb-2">Investment Amount</label><input type="number" id="investment-amount" value={investmentAmount} onChange={e => setInvestmentAmount(Number(e.target.value))} className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition"/></div>
                                 <button onClick={handleInvestment} className="w-full py-3 font-bold text-white bg-gradient-to-r from-teal-500 to-purple-600 rounded-lg hover:from-teal-600 hover:to-purple-700 transition-all duration-300 shadow-lg shadow-teal-500/20">Invest Now</button>
                                 {message && <p className="text-lime-300 text-center mt-2">{message}</p>}
                             </div>
                             <div className="lg:col-span-2 bg-slate-900/50 p-6 rounded-lg">
-                                <h4 className="text-lg font-bold text-sky-300 mb-4">Your Portfolio Holdings</h4>
+                                <div className="flex justify-between items-center mb-4"><h4 className="text-lg font-bold text-sky-300">Your Portfolio Holdings</h4><button onClick={handleGetAnalysis} disabled={isAnalysisLoading} className="flex items-center gap-2 text-sm px-3 py-1.5 font-bold text-white bg-gradient-to-r from-sky-500 to-indigo-600 rounded-lg hover:from-sky-600 hover:to-indigo-700 transition-all duration-300 shadow-lg shadow-sky-500/20 disabled:opacity-50"><GeminiIcon />{isAnalysisLoading ? 'Analyzing...' : 'Get AI Analysis'}</button></div>
+                                {isAnalysisLoading && <div className="text-slate-400 text-sm mb-4">✨ Thinking...</div>}
+                                {aiAnalysis && <div className="text-sm text-slate-300 bg-slate-700/30 p-3 rounded-lg mb-4 animate-fade-in">{aiAnalysis}</div>}
                                 <div className="space-y-3">
-                                    {topPortfolios.map(p => (
-                                        <div key={p} className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg hover:bg-slate-700/50 transition-colors">
-                                            <div><span className="font-semibold">{p}</span><div className="font-mono text-lime-300 text-lg">${investments[p].toLocaleString()}</div></div>
-                                            <button onClick={() => setViewingPortfolio(p)} className="bg-sky-600 text-white text-xs px-3 py-1 rounded-full hover:bg-sky-500 transition-colors">View Performance</button>
-                                        </div>
-                                    ))}
+                                    {topPortfolios.map(p => (<div key={p} className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg hover:bg-slate-700/50 transition-colors"><div><span className="font-semibold">{p}</span><div className="font-mono text-lime-300 text-lg">${investments[p].toLocaleString()}</div></div><button onClick={() => setViewingPortfolio(p)} className="bg-sky-600 text-white text-xs px-3 py-1 rounded-full hover:bg-sky-500 transition-colors">View Performance</button></div>))}
                                 </div>
-                                <div className="flex justify-between items-center border-t border-slate-700 mt-4 pt-4">
-                                    <span className="text-lg font-bold">Total Invested</span>
-                                    <span className="text-lg font-bold text-lime-300">${Object.values(investments).reduce((sum, val) => sum + val, 0).toLocaleString()}</span>
-                                </div>
+                                <div className="flex justify-between items-center border-t border-slate-700 mt-4 pt-4"><span className="text-lg font-bold">Total Invested</span><span className="text-lg font-bold text-lime-300">${Object.values(investments).reduce((sum, val) => sum + val, 0).toLocaleString()}</span></div>
                             </div>
                         </div>
                     </Card>
                 </div>
                 
-                <Card title="Cumulative Returns - Top 5 Factors vs BTC"><div className="bg-slate-800/50 p-2 rounded-lg"><img src={imageUrls.cumulativeReturns} alt="Cumulative Returns" className="w-full rounded-md"/></div></Card>
-                <Card title="Mean, Sharpe & Volatility - Top 5 Factors vs BTC"><div className="space-y-6"><img src={imageUrls.meanReturns} alt="Mean Annual Returns" className="w-full rounded-lg"/><img src={imageUrls.sharpeRatios} alt="Sharpe Ratios" className="w-full rounded-lg"/><img src={imageUrls.volatility} alt="Annualized Volatility" className="w-full rounded-lg"/></div></Card>
-                <Card title="Rolling Performance Dashboard"><div className="bg-slate-800/50 p-2 rounded-lg"><img src={imageUrls.rollingPerformance} alt="Rolling Performance" className="w-full rounded-md"/></div></Card>
-                <Card title="Daily Weighted Average Sentiment"><div className="bg-slate-800/50 p-2 rounded-lg"><img src={imageUrls.dailySentiment} alt="Daily Sentiment" className="w-full rounded-md"/></div></Card>
-                <Card title="Sentiment Analysis"><div className="space-y-6"><div className="flex flex-col items-center"><h4 className="text-lg font-semibold mb-2">Fear & Greed Gauge</h4><img src={imageUrls.fearGreedGauge} alt="Fear & Greed Gauge" className="w-full max-w-sm"/></div><div className="flex flex-col items-center"><h4 className="text-lg font-semibold mb-2">Confusion Matrix</h4><img src={imageUrls.confusionMatrix} alt="Confusion Matrix" className="w-full rounded-lg"/></div></div></Card>
-                <Card title="Distribution of Sentiment Score"><div className="bg-slate-800/50 p-2 rounded-lg"><img src={imageUrls.sentimentDistribution} alt="Sentiment Distribution" className="w-full rounded-md"/></div></Card>
+                <Card title="Cumulative Returns - Top 5 Factors vs BTC" onExplain={() => handleExplainChart('cumulativeReturns', 'Cumulative Returns - Top 5 Factors vs BTC')} explanation={chartExplanations.cumulativeReturns} isExplanationLoading={explanationLoading === 'cumulativeReturns'}><div className="bg-slate-800/50 p-2 rounded-lg"><img src={imageUrls.cumulativeReturns} alt="Cumulative Returns" className="w-full rounded-md"/></div></Card>
+                <Card title="Mean, Sharpe & Volatility" onExplain={() => handleExplainChart('meanSharpeVol', 'Mean, Sharpe & Volatility')} explanation={chartExplanations.meanSharpeVol} isExplanationLoading={explanationLoading === 'meanSharpeVol'}><div className="space-y-6"><img src={imageUrls.meanReturns} alt="Mean Annual Returns" className="w-full rounded-lg"/><img src={imageUrls.sharpeRatios} alt="Sharpe Ratios" className="w-full rounded-lg"/><img src={imageUrls.volatility} alt="Annualized Volatility" className="w-full rounded-lg"/></div></Card>
+                <Card title="Rolling Performance Dashboard" onExplain={() => handleExplainChart('rollingPerformance', 'Rolling Performance Dashboard')} explanation={chartExplanations.rollingPerformance} isExplanationLoading={explanationLoading === 'rollingPerformance'}><div className="bg-slate-800/50 p-2 rounded-lg"><img src={imageUrls.rollingPerformance} alt="Rolling Performance" className="w-full rounded-md"/></div></Card>
+                <Card title="Sentiment Analysis" onExplain={() => handleExplainChart('sentiment', 'Sentiment Analysis')} explanation={chartExplanations.sentiment} isExplanationLoading={explanationLoading === 'sentiment'}><div className="space-y-6"><div className="flex flex-col items-center"><h4 className="text-lg font-semibold mb-2">Fear & Greed Gauge</h4><img src={imageUrls.fearGreedGauge} alt="Fear & Greed Gauge" className="w-full max-w-sm"/></div><div className="flex flex-col items-center"><h4 className="text-lg font-semibold mb-2">Confusion Matrix</h4><img src={imageUrls.confusionMatrix} alt="Confusion Matrix" className="w-full rounded-lg"/></div></div></Card>
                 
                 <div className="lg:col-span-2">
                     <Card title="Classification Report"><pre className="text-sm text-slate-300 bg-slate-900 p-4 rounded-lg overflow-x-auto">{classificationReport}</pre></Card>
