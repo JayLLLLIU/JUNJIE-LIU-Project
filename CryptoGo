@@ -1,0 +1,214 @@
+import React, { useState, useEffect } from 'react';
+
+// --- Image URLs from the Report ---
+const imageUrls = {
+    cumulativeReturns: 'https://res.cloudinary.com/dzbfzmfzb/image/upload/v1754366067/cumret_top5_qmtcu9.png',
+    meanReturns: 'https://res.cloudinary.com/dzbfzmfzb/image/upload/v1754366066/mean_bars_yr0eis.png',
+    sharpeRatios: 'https://res.cloudinary.com/dzbfzmfzb/image/upload/v1754366066/sharpe_bars_ouhlm1.png',
+    volatility: 'https://res.cloudinary.com/dzbfzmfzb/image/upload/v1754366066/vol_bars_jmklzv.png',
+    rollingPerformance: 'https://res.cloudinary.com/dzbfzmfzb/image/upload/v1754366068/ew_rolling_sharpe_dashboard_clekdz.png',
+    dailySentiment: 'https://res.cloudinary.com/dzbfzmfzb/image/upload/v1754553346/daily_avg_sentiment_jicrfy.png',
+    fearGreedGauge: 'https://res.cloudinary.com/dzbfzmfzb/image/upload/v1754553351/fear_greed_gauge_gmb8wx.png',
+    confusionMatrix: 'https://res.cloudinary.com/dzbfzmfzb/image/upload/v1754553341/confusion_matrix_oarx9z.png',
+    sentimentDistribution: 'https://res.cloudinary.com/dzbfzmfzb/image/upload/v1754553357/hist_final_twxplw.png'
+};
+
+// --- Data for individual portfolio metrics ---
+const portfolioMetrics = {
+    'EW_volatility_14': { mean: '~53%', sharpe: '~0.7', vol: '~73%' },
+    'EW_volatility_21': { mean: '~72%', sharpe: '~0.9', vol: '~79%' },
+    'EW_momentum_14': { mean: '~74%', sharpe: '~1.1', vol: '~68%' },
+    'EW_momentum_21': { mean: '~69%', sharpe: '~1.0', vol: '~70%' },
+    'EW_volatility_28': { mean: '~65%', sharpe: '~0.85', vol: '~75%' }
+};
+
+// --- NEW: SVG Icons for UI Elements ---
+const ChartBarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-teal-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
+const ShieldCheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-sky-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
+const TrendingUpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>;
+
+// --- Reusable Card Component ---
+const Card = ({ title, children, className }) => (
+    <div className={`bg-slate-800/50 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-slate-700 hover:border-teal-400 transition-all duration-300 ${className}`}>
+        <h3 className="text-xl font-bold mb-4 bg-gradient-to-r from-teal-300 to-sky-400 text-transparent bg-clip-text">{title}</h3>
+        {children}
+    </div>
+);
+
+// --- Interactive Performance Modal ---
+const PerformanceModal = ({ portfolioName, metrics, onClose }) => {
+    if (!portfolioName) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 animate-fade-in">
+            <div className="bg-slate-900 rounded-2xl shadow-xl border border-slate-700 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                <div className="p-6 sticky top-0 bg-slate-900/80 backdrop-blur-md border-b border-slate-700 z-10 flex justify-between items-center">
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-teal-300 to-purple-400 text-transparent bg-clip-text">{portfolioName}</h2>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white text-3xl">&times;</button>
+                </div>
+                <div className="p-6 space-y-6">
+                    <div>
+                        <h4 className="text-lg font-semibold mb-4 text-slate-300">Key Metrics</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                            <div className="bg-slate-800/50 p-4 rounded-lg flex flex-col items-center justify-center space-y-2"><ChartBarIcon /><div className="text-sm text-slate-400">Mean % p.a.</div><div className="text-2xl font-bold text-teal-300">{metrics.mean}</div></div>
+                            <div className="bg-slate-800/50 p-4 rounded-lg flex flex-col items-center justify-center space-y-2"><ShieldCheckIcon /><div className="text-sm text-slate-400">Sharpe Ratio</div><div className="text-2xl font-bold text-sky-300">{metrics.sharpe}</div></div>
+                            <div className="bg-slate-800/50 p-4 rounded-lg flex flex-col items-center justify-center space-y-2"><TrendingUpIcon /><div className="text-sm text-slate-400">Volatility % p.a.</div><div className="text-2xl font-bold text-purple-300">{metrics.vol}</div></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 className="text-lg font-semibold mb-2 text-slate-300">Cumulative Returns vs BTC</h4>
+                        <div className="bg-slate-800/50 p-2 rounded-lg"><img src={imageUrls.cumulativeReturns} alt="Cumulative Returns" className="w-full rounded-lg shadow-lg"/></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Login Page Component ---
+const LoginPage = ({ onLogin }) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+
+    const handleLogin = (e) => {
+        e.preventDefault();
+        if (email && password) { onLogin(email); } 
+        else { setError('Please enter both email and password.'); }
+    };
+
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white p-4">
+            <div className="absolute inset-0 bg-grid-slate-700/10 [mask-image:linear-gradient(to_bottom,white_20%,transparent_75%)]"></div>
+            <div className="relative w-full max-w-md p-8 space-y-8 bg-slate-800/70 backdrop-blur-xl rounded-2xl shadow-2xl shadow-teal-500/10 border border-slate-700">
+                <div className="text-center">
+                    <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-purple-500">CryptoGo</h1>
+                    <p className="mt-2 text-slate-400">Login to access your portfolio</p>
+                </div>
+                <form className="space-y-6" onSubmit={handleLogin}>
+                    <div>
+                        <label className="text-sm font-bold text-slate-300">Email Address</label>
+                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 mt-2 text-slate-200 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition" placeholder="you@example.com"/>
+                    </div>
+                    <div>
+                        <label className="text-sm font-bold text-slate-300">Password</label>
+                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-3 mt-2 text-slate-200 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition" placeholder="••••••••"/>
+                    </div>
+                    {error && <p className="text-red-400 text-sm animate-pulse">{error}</p>}
+                    <button type="submit" className="w-full py-3 font-bold text-white bg-gradient-to-r from-teal-500 to-purple-600 rounded-lg hover:from-teal-600 hover:to-purple-700 transition-all duration-300 shadow-lg shadow-teal-500/20">Sign In</button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Main Dashboard Component ---
+const Dashboard = ({ user, onLogout }) => {
+    const topPortfolios = ['EW_volatility_14', 'EW_volatility_21', 'EW_momentum_14', 'EW_momentum_21', 'EW_volatility_28'];
+    const [virtualBalance, setVirtualBalance] = useState(100000);
+    const [investments, setInvestments] = useState(topPortfolios.reduce((acc, portfolio) => ({ ...acc, [portfolio]: 0 }), {}));
+    const [investmentAmount, setInvestmentAmount] = useState(1000);
+    const [selectedPortfolio, setSelectedPortfolio] = useState(topPortfolios[0]);
+    const [message, setMessage] = useState('');
+    const [viewingPortfolio, setViewingPortfolio] = useState(null);
+
+    const handleInvestment = () => {
+        if (investmentAmount <= 0) { setMessage('Please enter a positive investment amount.'); return; }
+        if (investmentAmount > virtualBalance) { setMessage('Insufficient balance for this investment.'); return; }
+        setVirtualBalance(prev => prev - investmentAmount);
+        setInvestments(prev => ({ ...prev, [selectedPortfolio]: prev[selectedPortfolio] + investmentAmount }));
+        setMessage(`Successfully invested $${investmentAmount.toLocaleString()} in ${selectedPortfolio}.`);
+        setInvestmentAmount(1000);
+    };
+
+    useEffect(() => {
+        if (message) {
+            const timer = setTimeout(() => setMessage(''), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [message]);
+
+    const classificationReport = `              precision    recall  f1-score   support\n\n           0       0.85      0.39      0.54     25752\n           1       0.67      0.94      0.78     33204\n\n    accuracy                           0.70     58956\n   macro avg       0.76      0.67      0.66     58956\nweighted avg       0.75      0.70      0.67     58956`;
+
+    return (
+        <div className="bg-slate-900 text-white min-h-screen p-4 sm:p-8 font-sans">
+             <div className="absolute inset-0 bg-grid-slate-700/10 [mask-image:linear-gradient(to_bottom,white_5%,transparent_50%)]"></div>
+            <header className="relative flex justify-between items-center mb-12">
+                <div className="text-left">
+                    <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-purple-500">CryptoGo</h1>
+                    <p className="text-slate-400 mt-2">Advanced Portfolio & Market Analysis</p>
+                </div>
+                <div className="text-right">
+                    <p className="text-slate-400">Welcome, {user}</p>
+                    <button onClick={onLogout} className="text-sm text-teal-400 hover:underline">Logout</button>
+                </div>
+            </header>
+
+            <main className="relative grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="lg:col-span-2">
+                    <Card title="Interactive Portfolio Investment">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                            <div className="lg:col-span-1 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-300 mb-2">Virtual Balance</label>
+                                    <div className="text-4xl font-bold text-lime-300">${virtualBalance.toLocaleString()}</div>
+                                </div>
+                                <div>
+                                    <label htmlFor="portfolio-select" className="block text-sm font-bold text-slate-300 mb-2">Select Portfolio</label>
+                                    <select id="portfolio-select" value={selectedPortfolio} onChange={e => setSelectedPortfolio(e.target.value)} className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition">
+                                        {topPortfolios.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label htmlFor="investment-amount" className="block text-sm font-bold text-slate-300 mb-2">Investment Amount</label>
+                                    <input type="number" id="investment-amount" value={investmentAmount} onChange={e => setInvestmentAmount(Number(e.target.value))} className="w-full p-3 bg-slate-700/50 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-400 transition"/>
+                                </div>
+                                <button onClick={handleInvestment} className="w-full py-3 font-bold text-white bg-gradient-to-r from-teal-500 to-purple-600 rounded-lg hover:from-teal-600 hover:to-purple-700 transition-all duration-300 shadow-lg shadow-teal-500/20">Invest Now</button>
+                                {message && <p className="text-lime-300 text-center mt-2">{message}</p>}
+                            </div>
+                            <div className="lg:col-span-2 bg-slate-900/50 p-6 rounded-lg">
+                                <h4 className="text-lg font-bold text-sky-300 mb-4">Your Portfolio Holdings</h4>
+                                <div className="space-y-3">
+                                    {topPortfolios.map(p => (
+                                        <div key={p} className="flex justify-between items-center bg-slate-800/50 p-3 rounded-lg hover:bg-slate-700/50 transition-colors">
+                                            <div><span className="font-semibold">{p}</span><div className="font-mono text-lime-300 text-lg">${investments[p].toLocaleString()}</div></div>
+                                            <button onClick={() => setViewingPortfolio(p)} className="bg-sky-600 text-white text-xs px-3 py-1 rounded-full hover:bg-sky-500 transition-colors">View Performance</button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex justify-between items-center border-t border-slate-700 mt-4 pt-4">
+                                    <span className="text-lg font-bold">Total Invested</span>
+                                    <span className="text-lg font-bold text-lime-300">${Object.values(investments).reduce((sum, val) => sum + val, 0).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+                
+                <Card title="Cumulative Returns - Top 5 Factors vs BTC"><div className="bg-slate-800/50 p-2 rounded-lg"><img src={imageUrls.cumulativeReturns} alt="Cumulative Returns" className="w-full rounded-md"/></div></Card>
+                <Card title="Mean, Sharpe & Volatility - Top 5 Factors vs BTC"><div className="space-y-6"><img src={imageUrls.meanReturns} alt="Mean Annual Returns" className="w-full rounded-lg"/><img src={imageUrls.sharpeRatios} alt="Sharpe Ratios" className="w-full rounded-lg"/><img src={imageUrls.volatility} alt="Annualized Volatility" className="w-full rounded-lg"/></div></Card>
+                <Card title="Rolling Performance Dashboard"><div className="bg-slate-800/50 p-2 rounded-lg"><img src={imageUrls.rollingPerformance} alt="Rolling Performance" className="w-full rounded-md"/></div></Card>
+                <Card title="Daily Weighted Average Sentiment"><div className="bg-slate-800/50 p-2 rounded-lg"><img src={imageUrls.dailySentiment} alt="Daily Sentiment" className="w-full rounded-md"/></div></Card>
+                <Card title="Sentiment Analysis"><div className="space-y-6"><div className="flex flex-col items-center"><h4 className="text-lg font-semibold mb-2">Fear & Greed Gauge</h4><img src={imageUrls.fearGreedGauge} alt="Fear & Greed Gauge" className="w-full max-w-sm"/></div><div className="flex flex-col items-center"><h4 className="text-lg font-semibold mb-2">Confusion Matrix</h4><img src={imageUrls.confusionMatrix} alt="Confusion Matrix" className="w-full rounded-lg"/></div></div></Card>
+                <Card title="Distribution of Sentiment Score"><div className="bg-slate-800/50 p-2 rounded-lg"><img src={imageUrls.sentimentDistribution} alt="Sentiment Distribution" className="w-full rounded-md"/></div></Card>
+                
+                <div className="lg:col-span-2">
+                    <Card title="Classification Report"><pre className="text-sm text-slate-300 bg-slate-900 p-4 rounded-lg overflow-x-auto">{classificationReport}</pre></Card>
+                </div>
+            </main>
+
+            {viewingPortfolio && (<PerformanceModal portfolioName={viewingPortfolio} metrics={portfolioMetrics[viewingPortfolio]} onClose={() => setViewingPortfolio(null)}/>)}
+        </div>
+    );
+};
+
+// --- Main App Component to handle routing ---
+const App = () => {
+    const [user, setUser] = useState(null);
+    if (!user) { return <LoginPage onLogin={setUser} />; }
+    return <Dashboard user={user} onLogout={() => setUser(null)} />;
+};
+
+export default App;
